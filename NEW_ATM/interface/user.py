@@ -1,6 +1,7 @@
 import os
 from db import db_handler
 from conf import setting
+import time
 
 
 def register_interface(name, pwd, balance=15000):
@@ -11,6 +12,8 @@ def register_interface(name, pwd, balance=15000):
         'name': name,
         'password': pwd,
         'balance': balance,
+        'lock': False,
+        'time': time.strftime('%d'),
         'rivers': [],
         'shopping_cart': []
     }
@@ -37,6 +40,11 @@ def account_switch_interface(my_account, to_account):
         return False, '账户不存在'
 
 
-
+def check_lock_interface(name):
+    user_dic = db_handler.select(name)
+    if user_dic['lock']:
+        return False, f'{name}用户已被冻结'
+    else:
+        return True, f'{name}可以登录'
 
 

@@ -1,8 +1,13 @@
-from interface import bank, user, shop
+from interface import bank, user, shop, admin
 from lib import common, goods
+from conf import setting
+
 
 
 user_info = {
+    'name': None,
+}
+admin_user_info = {
     'name': None,
 }
 
@@ -36,12 +41,17 @@ def login():
         user_name = input('user_name:>>').strip()
         if user_name == 'q':
             break
+
+        flag, msg = user.check_lock_interface(user_name)
+        if not flag:
+            print(msg)
+            continue
         password = input('password:>>').strip()
         flag, msg = user.login_interface(user_name, password)
         if flag:
             user_info['name'] = user_name
-            # print(user_info['name'])
             print(msg)
+            admin.admin_logger.info(f'{user_name}登陆成功...')
             break
         else:
             print(msg)
@@ -68,8 +78,6 @@ def account_recharge():
         flag, msg = bank.account_recharge_interface(user_info['name'], money)
         if flag:
             print(msg)
-            logger = common.log('recharge.log')
-            logger.error('%s 充值了 %s' % (user_info['name'], money))
             break
         else:
             print(msg)
@@ -85,8 +93,6 @@ def account_withdraw():
             flag, msg = bank.account_withdraw_interface(user_info['name'], money)
             if flag:
                 print(msg)
-                logger = common.log('withdraw.log')
-                logger.error('%s 提现了 %s' % (user_info['name'], money))
                 break
             else:
                 print(msg)
@@ -158,8 +164,7 @@ def add_shop_cart():
                     break
                 else:
                     print('请理性输入...')
-            if shopping_cart:
-                shop.add_shop_cart_interface(shopping_cart, user_info['name'])
+    shop.add_shop_cart_interface(shopping_cart, user_info['name'])
 
 
 @common.login_auth
@@ -169,7 +174,7 @@ def clean_shop_cart():
         choice = input('是否要清空当前的购物车:>>(y/n) -->').strip()
         if choice == 'y':
             money_num = shop.clean_shop_cart_interface(user_info['name'])
-            if balance >= money_num:
+            if (balance + setting.CREDIT_MONEY) >= money_num:
                 flag, msg = bank.clean_shop_cart_interface(user_info['name'], money_num)
                 if flag:
                     print(msg)
@@ -200,6 +205,117 @@ def check_shopping_cart():
     print(shop.check_shopping_cart_interface(user_info['name']))
 
 
+# 注册管理员账户
+def admin_register():
+    while 1:
+        user_name = input('user_name:>>').strip()
+        flag, msg = admin.check_uname_interface(user_name)
+        if not flag:
+            print(msg)
+            continue
+        password = input('password:>>').strip()
+        again_password = input('again_password:>>').strip()
+        if password != again_password:
+            print('密码输入不一致，请重新输入...')
+            continue
+        flag, msg = admin.save_register_interface(user_name, password)
+        if flag:
+            print(msg)
+            admin.admin_logger.info(f'{user_name}注册成功...')
+            break
+
+
+# 登陆管理员账户
+def admin_login():
+    while 1:
+        user_name = input('user_name:>>').strip()
+        if user_name == 'q':break
+        password = input('password:>>').strip()
+        flag, msg = admin.admin_login_interface(user_name, password)
+        if flag:
+            admin_user_info['name'] = user_name
+            print(msg)
+            admin.admin_logger.info(f'{user_name}登陆成功...')
+            break
+        else:
+            print(msg)
+
+
+# 冻结账户
+def lock_account():
+    while 1:
+        acc = input('请输入要冻结的账户:>>').strip()
+        if acc == 'q':break
+        flag, msg = admin.lock_account_interface(acc)
+        if flag:
+            print(msg)
+            admin.admin_logger.info(f'{acc}冻结成功...')
+            break
+        else:
+            print(msg)
+
+
+# 解冻账户
+def unlock_account():
+    while 1:
+        acc = input('请输入要解冻的账户:>>').strip()
+        if acc == 'q':break
+        flag, msg = admin.unlock_account_interface(acc)
+        if flag:
+            print(msg)
+            admin.admin_logger.info(f'{acc}解冻成功...')
+            break
+        else:
+            print(msg)
+    pass
+
+
+# 修改额度
+def change_balance():
+    while 1:
+        change_name = input('请输入要修改账户的name:>>').strip()
+        if change_name == 'q':break
+        bal = input('请输入要修改的金额数:>>').strip()
+        if bal == 'q':break
+        if not bal.isdigit():
+            print('请理性输入')
+            continue
+        else:
+            bal = int(bal)
+            flag, msg = admin.change_bal_interface(change_name, bal)
+            if flag:
+                print(msg)
+                admin.admin_logger.info(f'{change_name}额度修改成功...')
+                break
+            else:
+                print(msg)
+
+
+ad = {
+    '1': admin_register,
+    '2': admin_login,
+    '3': lock_account,
+    '4': unlock_account,
+    '5': change_balance,
+}
+
+
+# 管理员功能
+def admin_func():
+    while 1:
+        print("""
+            1、注册
+            2、登陆
+            3、冻结账户
+            4、解冻账户
+            5、修改账户额度
+        """)
+        choice = input('请输入要操作的序号:>>').strip()
+        if choice == 'q':break
+        if choice not in ad:continue
+        ad[choice]()
+
+
 func_dic = {
     '1': register,
     '2': login,
@@ -212,7 +328,8 @@ func_dic = {
     '9': add_shop_cart,
     '10': clean_shop_cart,
     '11': del_shop_goods,
-    '12': check_shopping_cart
+    '12': check_shopping_cart,
+    '13': admin_func
     }
 
 
@@ -231,6 +348,7 @@ def run():
         10 清空购物车
         11 删除shop_cart中某物品
         12 查看购物车
+        13 管理员功能
         ''')
         choice = input('请选择>>:').strip()
         if choice == 'q':

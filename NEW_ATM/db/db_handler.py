@@ -22,6 +22,38 @@ def save(user_dic):
         f.flush()
 
 
+# 管理员账户的查找
+def admin_select(name):
+    path = os.path.join(setting.BASE_ADMIN_DB, '%s.json' % name)
+    if os.path.exists(path):
+        with open(path, 'r', encoding='utf-8') as f:
+
+            return json.load(f)
+    else:
+        return None
+
+
+# 管理员账户的保存
+def admin_save(user_dic):
+    path = os.path.join(setting.BASE_ADMIN_DB, '%s.json' % user_dic['name'])
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(user_dic, f, ensure_ascii=False)
+        f.flush()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
     # save(user_dic={'name':'william'})
     pass
